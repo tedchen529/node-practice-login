@@ -4,6 +4,7 @@ import session from "express-session";
 import dayjs from "dayjs";
 import moment from "moment-timezone";
 import cors from "cors";
+import bcrypt from "bcryptjs";
 import sales from "./data/sales.json" assert { type: "json" };
 // import multer from "multer";
 // const upload = multer({ dest: "tmp_uploads/" });
@@ -133,6 +134,66 @@ app.get("/yahoo", async (req, res) => {
   const txt = await r.text();
   res.send(txt);
 });
+
+app.get("/login", async (req, res) => {
+  res.render("login");
+});
+
+app.post("/login", async (req, res) => {
+  // res.json(req.body);
+
+  const output = {
+    success: false,
+    code: 0,
+    postData: req.body,
+    // Q:?
+  };
+
+  if (!req.body.email || !req.body.password) {
+    // 資料不足
+    output.code = 410;
+    return res.json(output);
+  }
+
+  const sql = "SELECT * FROM members WHERE email=?";
+  // Q: How does it know that "?" is req.body.email?
+  const [rows] = await db.query(sql, [req.body.email]);
+
+  if (!rows.length) {
+    // 帳號是錯的
+    output.code = 400;
+    return res.json(output);
+  }
+
+  const row = rows[0];
+  const pass = await bcrypt.compare(req.body.password, row.hash);
+  // NOTE: Match with hashed password
+  // console.log(req.body.password, row.hash);
+
+  if (!pass) {
+    // 密碼是錯的
+    output.code = 420;
+    return res.json(output);
+  }
+
+  output.code = 200;
+  output.success = true;
+
+  // 設定 session
+  // Q: What is a session?
+  req.session.admin = {
+    // Q: Why set it in request? Is this creating new properties?
+    id: row.id,
+    email: row.email,
+    nickname: row.nickname,
+  };
+
+  output.member = req.session.admin;
+  res.json(output);
+});
+
+app.get("/logout", async (req, res) => {});
+// Q: Explain the three routers
 
 // 設定靜態內容的資料夾
 app.use(express.static("public"));

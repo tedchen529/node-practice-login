@@ -4,6 +4,7 @@ import session from "express-session";
 import dayjs from "dayjs";
 import moment from "moment-timezone";
 import cors from "cors";
+import mysql_session from "express-mysql-session";
 import bcrypt from "bcryptjs";
 import sales from "./data/sales.json" assert { type: "json" };
 // import multer from "multer";
@@ -21,13 +22,23 @@ app.set("view engine", "ejs");
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+const MysqlStore = mysql_session(session);
+const sessionStore = new MysqlStore({}, db);
+
 app.use(
   session({
     saveUninitialized: false,
     resave: false,
+    store: sessionStore,
+    // NOTE: Configure express-session to use the store set up with express-mysql-session
     secret: "kdgdf9485498KIUGLKIU45490",
   })
 );
+// Q: "express-session" middleware create sessions? Session stores? Session storages?
+// Q: Session store (server-side) vs session storage (client side)?
+// Q: Cookies vs localStorage vs sessionStorage?
+// Q: Revisit the configurations!
 
 // 自訂頂層 middleware
 app.use((req, res, next) => {
@@ -36,6 +47,9 @@ app.use((req, res, next) => {
 
   res.locals.toDateString = (d) => dayjs(d).format("YYYY-MM-DD");
   res.locals.toDateTimeString = (d) => dayjs(d).format("YYYY-MM-DD HH:mm:ss");
+
+  res.locals.session = req.session;
+  // Q: 讓 templates 可以取用 session?
 
   next();
 });
@@ -146,7 +160,6 @@ app.post("/login", async (req, res) => {
     success: false,
     code: 0,
     postData: req.body,
-    // Q:?
   };
 
   if (!req.body.email || !req.body.password) {
@@ -158,6 +171,7 @@ app.post("/login", async (req, res) => {
   const sql = "SELECT * FROM members WHERE email=?";
   // Q: How does it know that "?" is req.body.email?
   const [rows] = await db.query(sql, [req.body.email]);
+  // NOTE: Can add more elements in the array
 
   if (!rows.length) {
     // 帳號是錯的
@@ -180,9 +194,7 @@ app.post("/login", async (req, res) => {
   output.success = true;
 
   // 設定 session
-  // Q: What is a session?
   req.session.admin = {
-    // Q: Why set it in request? Is this creating new properties?
     id: row.id,
     email: row.email,
     nickname: row.nickname,
@@ -192,8 +204,10 @@ app.post("/login", async (req, res) => {
   res.json(output);
 });
 
-app.get("/logout", async (req, res) => {});
-// Q: Explain the three routers
+app.get("/logout", async (req, res) => {
+  delete req.session.admin;
+  res.redirect("/");
+});
 
 // 設定靜態內容的資料夾
 app.use(express.static("public"));

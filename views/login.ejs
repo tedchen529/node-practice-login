@@ -50,6 +50,9 @@
       .then((r) => r.json())
       .then((data) => {
         console.log(data);
+        if (data.success) {
+          location.href = "/";
+        }
       })
       .catch((ex) => console.log(ex));
   }

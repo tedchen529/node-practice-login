@@ -33,6 +33,10 @@ app.use(
     store: sessionStore,
     // NOTE: Configure express-session to use the store set up with express-mysql-session
     secret: "kdgdf9485498KIUGLKIU45490",
+    cookie: {
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      // NOTE: One week
+    },
   })
 );
 // Q: "express-session" middleware create sessions? Session stores? Session storages?
@@ -50,6 +54,7 @@ app.use((req, res, next) => {
 
   res.locals.session = req.session;
   // Q: 讓 templates 可以取用 session?
+  // Q: "Within the scope of this response, make the session data (res.locals.session) equal to the session data that is brought in by the request"?
 
   next();
 });

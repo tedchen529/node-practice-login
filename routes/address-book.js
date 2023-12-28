@@ -6,6 +6,14 @@ import dayjs from "dayjs";
 const router = express.Router();
 
 router.use((req, res, next) => {
+  const u = req.url.split("?")[0];
+  // console.log({ u });
+  // Q: "/address-book" has been shortened to "/"?
+  if (req.method === "GET" && u === "/") {
+    return next();
+    // NOTE: Exit middleware
+  }
+
   if (!req.session.admin) {
     return res.redirect("/login");
   }
@@ -64,7 +72,11 @@ router.get("/", async (req, res) => {
     return res.redirect(output.redirect);
   }
 
-  res.render("address-book/list", output);
+  if (!req.session.admin) {
+    res.render("address-book/list-no-admin", output);
+  } else {
+    res.render("address-book/list", output);
+  }
 });
 
 router.get("/api", async (req, res) => {

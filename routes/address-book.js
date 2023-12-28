@@ -5,6 +5,13 @@ import dayjs from "dayjs";
 
 const router = express.Router();
 
+router.use((req, res, next) => {
+  if (!req.session.admin) {
+    return res.redirect("/login");
+  }
+  next();
+});
+
 const getListData = async (req) => {
   const perPage = 20; // 每頁幾筆
   let page = +req.query.page || 1;
